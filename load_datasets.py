@@ -7,7 +7,7 @@ from sklearn import linear_model
 from sklearn import tree
 from sklearn import svm
 # PUT POLARITY DATASET PATH HERE
-POLARITY_PATH = '/Users/marcotcr/phd/datasets/multi_domain_polarity/'
+POLARITY_PATH = 'processed_acl/'
 def LoadDataset(dataset_name):
   if dataset_name.endswith('ng'):
     if dataset_name == '2ng':
