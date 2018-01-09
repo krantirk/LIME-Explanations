@@ -13,7 +13,7 @@ You need python, sklearn, numpy, scipy.
 ## Getting the data
 
 1. Clone or downnload this repository
-2. Download the datasets and save then under lime-experiments/
+2. Download the datasets using the links below, and save them under lime-experiments/
 
     * [Religion dataset](https://github.com/marcotcr/lime-experiments/blob/master/religion_dataset.tar.gz)
     * [Multi-polarity datasets](https://www.cs.jhu.edu/~mdredze/datasets/sentiment/processed_acl.tar.gz)
