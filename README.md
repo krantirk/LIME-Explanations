@@ -2,10 +2,36 @@
 
 This repository contains the code to run the experiments present in [this paper](http://arxiv.org/abs/1602.04938). The code here is frozen to what it was when we originally wrote the paper. If you're interested in using LIME, check out [this repository](https://github.com/marcotcr/lime), where we have packaged it up, improved the code quality, added visualizations and other improvements.
 
-Running the commands below should be enough to get all of the results. You need python, sklearn, numpy, scipy.
-If we forgot something, please email the first author.
-
 **This code was modified by @mari-linhares in order to be easier to reproduce the experiments.**
+
+## What I need in order to run these experiments?
+
+### Install dependencies
+
+You need python, sklearn, numpy, scipy.
+
+## Getting the data
+
+1. Clone or downnload this repository
+2. Download the datasets and save then under lime-experiments/
+
+    * [Religion dataset](https://github.com/marcotcr/lime-experiments/blob/master/religion_dataset.tar.gz)
+    * [Multi-polarity datasets](https://www.cs.jhu.edu/~mdredze/datasets/sentiment/processed_acl.tar.gz)
+
+3. Unzip the tar files
+
+Now you should have the following directories under lime-experiments/:
+
+```
+processes_acl/books/
+processes_acl/dvd/
+processes_acl/eletronics/
+processes_acl/kitchen/
+
+religion_dataset/atheism/
+religion_dataset/christianity
+```
+
 
 ## Experiment in section 5.2:
 - DATASET -> 'multi_polarity_books', 'multi_polarity_kitchen', 'multi_polarity_dvd', 'multi_polarity_kitchen'
@@ -31,10 +57,3 @@ Run the following with the desired number of rounds:
         python generate_data_for_compare_classifiers.py -d DATASET -o out_comparing/ -k 10 -r NUM_ROUNDS
 
         python compare_classifiers.py -d DATASET -o out_comparing/ -k 10 -n 10 -p PICK
-
-
-## Religion dataset:
-Available [here](https://github.com/marcotcr/lime-experiments/blob/master/religion_dataset.tar.gz)
-
-## Multi-polarity datasets:
-I got them from [here](https://www.cs.jhu.edu/~mdredze/datasets/sentiment/)
