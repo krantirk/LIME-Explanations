@@ -14,11 +14,15 @@ from sklearn import ensemble, cross_validation
 import pickle
 import parzen_windows
 import argparse
+
+
 def get_random_indices(labels, class_, probability):
   nonzero = (labels == class_).nonzero()[0]
   if nonzero.shape[0] == 0 or probability == 0:
     return []
   return np.random.choice(nonzero, int(probability * len(nonzero)) , replace=False)
+
+
 def add_corrupt_feature(feature_name, clean_train, clean_test, dirty_train,
                         train_labels, test_labels, class_probs_dirty, class_probs_clean, fake_prefix='FAKE'):
     """clean_train, clean_test, dirty_train will be corrupted"""
@@ -32,6 +36,8 @@ def add_corrupt_feature(feature_name, clean_train, clean_test, dirty_train,
       indices = get_random_indices(test_labels, class_, class_probs_clean[class_])
       for i in indices:
         clean_test[i] += ' %s%s%s' % (fake_prefix, feature_name, fake_prefix)
+
+
 def corrupt_dataset(independent_features, train_data, train_labels, test_data, test_labels):
     # independent_features: list [([.3, .8],[.5,.5], 3), ([.1, .1],[0, 0], 1)
     # ...]. Each element in list is a tuple (l,l2, n) where l a list
@@ -49,15 +55,9 @@ def corrupt_dataset(independent_features, train_data, train_labels, test_data, t
             add_corrupt_feature('%d' % idx, clean_train, clean_test, dirty_train, train_labels, test_labels, probs, probs2)
             idx += 1
     return clean_train, dirty_train, clean_test
-def main():
-  parser = argparse.ArgumentParser(description='Evaluate some explanations')
-  parser.add_argument('--dataset', '-d', type=str, required=True,help='dataset name')
-  parser.add_argument('--output_folder', '-o', type=str, required=True, help='output folder')
-  parser.add_argument('--num_features', '-k', type=int, required=True, help='num features')
-  parser.add_argument('--num_rounds', '-r', type=int, required=True, help='num rounds')
-  parser.add_argument('--start_id',  '-i', type=int, default=0,required=False, help='output start id')
-  args = parser.parse_args()
-  dataset = args.dataset
+
+
+def run_experiment(dataset, output_folder, num_features, num_rounds, start_id=0):
   train_data, train_labels, test_data, test_labels, class_names = LoadDataset(dataset)
   rho = 25
   kernel = lambda d: np.sqrt(np.exp(-(d**2) / rho ** 2))
@@ -71,16 +71,16 @@ def main():
   0.75, 'random_forest': 0.5, 'embforest': 5.0}, 'multi_polarity_books':
   {'neighbors': 0.5, 'svm': 7.0, 'tree': 2.0, 'logreg': 1.0, 'random_forest':
   1.0, 'embforest': 3.0}}
-  parzen1 = parzen_windows.ParzenWindowClassifier()
-  parzen1.sigma = sigmas[dataset]['random_forest']
-  parzen2 = parzen_windows.ParzenWindowClassifier()
-  parzen2.sigma = sigmas[dataset]['random_forest']
+  #parzen1 = parzen_windows.ParzenWindowClassifier()
+  #parzen1.sigma = sigmas[dataset]['random_forest']
+  #parzen2 = parzen_windows.ParzenWindowClassifier()
+  #parzen2.sigma = sigmas[dataset]['random_forest']
   random = explainers.RandomExplainer()
 
-  for Z in range(args.num_rounds):
+  for Z in range(num_rounds):
     exps1 = {}
     exps2 = {}
-    explainer_names = ['lime', 'parzen', 'random', 'greedy', 'mutual']
+    explainer_names = ['lime', 'random', 'greedy', 'mutual']  # parzen
     for expl in explainer_names:
       exps1[expl] = []
       exps2[expl] = []
@@ -127,10 +127,10 @@ def main():
     predictions2 = c2.predict(dirty_train_vectors)
     predict_probas = c1.predict_proba(dirty_train_vectors)[:,1]
     predict_probas2 = c2.predict_proba(dirty_train_vectors)[:,1]
-    cv_preds1 = cross_validation.cross_val_predict(c1, dirty_train_vectors[train_idx], train_labels[train_idx], cv=5)
-    cv_preds2 = cross_validation.cross_val_predict(c2, dirty_train_vectors[train_idx], train_labels[train_idx], cv=5)
-    parzen1.fit(dirty_train_vectors[train_idx], cv_preds1)
-    parzen2.fit(dirty_train_vectors[train_idx], cv_preds2)
+    #cv_preds1 = cross_validation.cross_val_predict(c1, dirty_train_vectors[train_idx], train_labels[train_idx], cv=5)
+    #cv_preds2 = cross_validation.cross_val_predict(c2, dirty_train_vectors[train_idx], train_labels[train_idx], cv=5)
+    #parzen1.fit(dirty_train_vectors[train_idx], cv_preds1)
+    #parzen2.fit(dirty_train_vectors[train_idx], cv_preds2)
     pp = []
     pp2 = []
     true_labels = []
@@ -143,38 +143,35 @@ def main():
       pp.append(predict_probas[i])
       pp2.append(predict_probas2[i])
       true_labels.append(train_labels[i])
-      exp, mean = local.explain_instance(dirty_train_vectors[i], 1, c1.predict_proba, args.num_features)
+      exp, mean = local.explain_instance(dirty_train_vectors[i], 1, c1.predict_proba, num_features)
       exps1['lime'].append((exp, mean))
 
-      exp = parzen1.explain_instance(dirty_train_vectors[i], 1, c1.predict_proba, args.num_features, None) 
-      mean = parzen1.predict_proba(dirty_train_vectors[i])[1]
-      exps1['parzen'].append((exp, mean))
+      #exp = parzen1.explain_instance(dirty_train_vectors[i], 1, c1.predict_proba, num_features, None) 
+      #mean = parzen1.predict_proba(dirty_train_vectors[i])[1]
+      #exps1['parzen'].append((exp, mean))
 
-      exp = random.explain_instance(dirty_train_vectors[i], 1, None, args.num_features, None)
+      exp = random.explain_instance(dirty_train_vectors[i], 1, None, num_features, None)
       exps1['random'].append(exp)
 
-      exp = explainers.explain_greedy_martens(dirty_train_vectors[i], predictions[i], c1.predict_proba, args.num_features)
+      exp = explainers.explain_greedy_martens(dirty_train_vectors[i], predictions[i], c1.predict_proba, num_features)
       exps1['greedy'].append(exp)
 
 
       # Classifier 2
-      exp, mean = local.explain_instance(dirty_train_vectors[i], 1, c2.predict_proba, args.num_features)
+      exp, mean = local.explain_instance(dirty_train_vectors[i], 1, c2.predict_proba, num_features)
       exps2['lime'].append((exp, mean))
 
-      exp = parzen2.explain_instance(dirty_train_vectors[i], 1, c2.predict_proba, args.num_features, None) 
-      mean = parzen2.predict_proba(dirty_train_vectors[i])[1]
-      exps2['parzen'].append((exp, mean))
+      #exp = parzen2.explain_instance(dirty_train_vectors[i], 1, c2.predict_proba, num_features, None) 
+      #mean = parzen2.predict_proba(dirty_train_vectors[i])[1]
+      #exps2['parzen'].append((exp, mean))
 
-      exp = random.explain_instance(dirty_train_vectors[i], 1, None, args.num_features, None)
+      exp = random.explain_instance(dirty_train_vectors[i], 1, None, num_features, None)
       exps2['random'].append(exp)
 
-      exp = explainers.explain_greedy_martens(dirty_train_vectors[i], predictions2[i], c2.predict_proba, args.num_features)
+      exp = explainers.explain_greedy_martens(dirty_train_vectors[i], predictions2[i], c2.predict_proba, num_features)
       exps2['greedy'].append(exp)
 
     out = {'true_labels' : true_labels, 'untrustworthy' : untrustworthy, 'train_acc1' :  train_acc1, 'train_acc2' : train_acc2, 'test_acc1' : test_acc1, 'test_acc2' : test_acc2, 'exps1' : exps1, 'exps2': exps2, 'predict_probas1': pp, 'predict_probas2': pp2}
-    pickle.dump(out, open(os.path.join(args.output_folder, 'comparing_%s_%s_%d.pickle' % (dataset, args.num_features, Z + args.start_id)), 'w'))
+    pickle.dump(out, open(os.path.join(output_folder, 'comparing_%s_%s_%d.pickle' % (dataset, num_features, Z + start_id)), 'w'))
 
 
-
-if __name__ == "__main__":
-    main()

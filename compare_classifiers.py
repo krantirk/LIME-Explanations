@@ -120,35 +120,24 @@ def tally_mistrust(explainer, exps, predict_probas, untrustworthy):
         mistrust += 1
   return mistrust 
 
-
-def main():
-  parser = argparse.ArgumentParser(description='Evaluate some explanations')
-  parser.add_argument('--dataset', '-d', type=str, required=True,help='dataset name')
-  parser.add_argument('--output_folder', '-o', type=str, required=True, help='output folder')
-  parser.add_argument('--num_features', '-k', type=int, required=True, help='num features')
-  parser.add_argument('--pick', '-p', type=str, required=False, default='all', help='all, submodular, submodular2 or random')
-  parser.add_argument('--num_instances', '-n', type=int, required=False, default=1, help='number of instances to look at')
-  parser.add_argument('--num_rounds', '-r', type=int, required=False, default=10, help='num rounds')
-  #parser.add_argument('--start_id',  '-i', type=int, required=True, help='output start id')
-  args = parser.parse_args()
-  dataset = args.dataset
+def run_features(dataset, output_folder, num_features, pick, num_instances, num_rounds):
   got_right = lambda test1, test2, mistrust1, mistrust2: mistrust1 < mistrust2 if test1 > test2 else mistrust1 > mistrust2
-  names = ['lime', 'parzen', 'random', 'greedy']
+  names = ['lime', 'random', 'greedy']  # parzen
   num_exps = 0
-  B = args.num_instances
+  B = num_instances
   rounds = 1
-  if args.pick == 'all':
+  if pick == 'all':
     pick_function = all_pick
-  elif args.pick == 'submodular':
+  elif pick == 'submodular':
     pick_function = lambda a,b,c : submodular_pick(a,b,c, use_explanation_weights=True)
-  elif args.pick == 'random':
+  elif pick == 'random':
     pick_function = random_pick
-    rounds =args.num_rounds
+    rounds =num_rounds
   accuracy = collections.defaultdict(lambda: [])
   right = collections.defaultdict(lambda: [])
   for r in range(rounds):
     right = collections.defaultdict(lambda: [])
-    for filez in glob.glob(os.path.join(args.output_folder, 'comparing_%s*' % args.dataset))[:800]:
+    for filez in glob.glob(os.path.join(output_folder, 'comparing_%s*' % dataset))[:800]:
       num_exps += 1
       pickled_map = pickle.load(open(filez))
       predict_probas = pickled_map['predict_probas1']
@@ -169,7 +158,7 @@ def main():
           pick1, pick2 = pick_function(pickled_map, explainer, B)
           exps1 = pickled_map['exps1'][explainer]
           exps2 = pickled_map['exps2'][explainer]
-        if args.pick != 'all':
+        if pick != 'all':
           unt1 = find_untrustworthy(explainer, exps1, pick1, untrustworthy)
           unt2 = find_untrustworthy(explainer, exps2, pick2, untrustworthy)
         else:
@@ -190,6 +179,62 @@ def main():
   for name in right:
     print name, np.mean(accuracy[name])
 
+def run_experiment(dataset, output_folder, num_features, pick='all', num_instances=1, num_rounds=10):
+  got_right = lambda test1, test2, mistrust1, mistrust2: mistrust1 < mistrust2 if test1 > test2 else mistrust1 > mistrust2
+  names = ['lime', 'random', 'greedy']  # parzen
+  num_exps = 0
+  B = num_instances
+  rounds = 1
+  if pick == 'all':
+    pick_function = all_pick
+  elif pick == 'submodular':
+    pick_function = lambda a,b,c : submodular_pick(a,b,c, use_explanation_weights=True)
+  elif pick == 'random':
+    pick_function = random_pick
+    rounds =num_rounds
+  accuracy = collections.defaultdict(lambda: [])
+  right = collections.defaultdict(lambda: [])
+  for r in range(rounds):
+    right = collections.defaultdict(lambda: [])
+    for filez in glob.glob(os.path.join(output_folder, 'comparing_%s*' % dataset))[:800]:
+      num_exps += 1
+      pickled_map = pickle.load(open(filez))
+      predict_probas = pickled_map['predict_probas1']
+      predict_probas2 = pickled_map['predict_probas2']
+      test1 = pickled_map['test_acc1']
+      test2 = pickled_map['test_acc2']
+      untrustworthy = pickled_map['untrustworthy']
+      for explainer in names:
+        if explainer.startswith('lime'):
+          pick1, pick2 = pick_function(pickled_map, 'lime', B)
+          exps1 = pickled_map['exps1']['lime']
+          exps2 = pickled_map['exps2']['lime']
+        elif explainer.startswith('parzen'):
+          pick1, pick2 = pick_function(pickled_map, 'parzen', B)
+          exps1 = pickled_map['exps1']['parzen']
+          exps2 = pickled_map['exps2']['parzen']
+        else:
+          pick1, pick2 = pick_function(pickled_map, explainer, B)
+          exps1 = pickled_map['exps1'][explainer]
+          exps2 = pickled_map['exps2'][explainer]
+        if pick != 'all':
+          unt1 = find_untrustworthy(explainer, exps1, pick1, untrustworthy)
+          unt2 = find_untrustworthy(explainer, exps2, pick2, untrustworthy)
+        else:
+          unt1 = unt2 = untrustworthy
+        mistrust1 = tally_mistrust(explainer, exps1, predict_probas, unt1)
+        mistrust2 = tally_mistrust(explainer, exps2, predict_probas2, unt2)
+        while mistrust1 == mistrust2:
+          mistrust1 = np.random.randint(0,10)                                             
+          mistrust2 = np.random.randint(0,10)
+        #print explainer, mistrust1, mistrust2
+        right[explainer].append(int(got_right(test1, test2, mistrust1, mistrust2)))
+      right['random_choice'].append(int(got_right(test1, test2, np.random.random(), np.random.random())))
+      #print [(x[0], sum(x[1])) for x in right.iteritems()]
+      #print filez
+    for name in right:
+      accuracy[name].append(np.mean(right[name]))
+  print 'Mean accuracy:'
+  for name in right:
+    print name, np.mean(accuracy[name])
 
-if __name__ == "__main__":
-    main()
