@@ -5,5 +5,4 @@ mkdir religion_dataset
 wget -qO- https://github.com/marcotcr/lime-experiments/blob/master/religion_dataset.tar.gz?raw=true | tar xvz -C religion_dataset
 
 # downloads and unzips Multi-polarity datasets
-mkdir processed_acl
-wget -qO- https://www.cs.jhu.edu/~mdredze/datasets/sentiment/processed_acl.tar.gz | tar xvz -C processed_acl
+wget -qO- https://www.cs.jhu.edu/~mdredze/datasets/sentiment/processed_acl.tar.gz | tar xvz
