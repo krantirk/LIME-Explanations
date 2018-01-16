@@ -49,8 +49,11 @@ To run (1 time) the experiment present in the paper run:
 
 This will print the results in the screen, and output graphs in output_section_5_2/
 
-![img1](output_section_5_2/multi_polarity_books_l1logreg.png) ![img2](output_section_5_2/multi_polarity_books_tree.png)
-![img1](output_section_5_2/multi_polarity_dvs_l1logreg.png) ![img2](output_section_5_2/multi_polarity_dvs_tree.png)
+### Book dataset: l1logreg and tree
+<img src="output_section_5_2/multi_polarity_books_l1logreg.png" width="425"/> <img src="output_section_5_2/multi_polarity_books_tree.png" width="425"/>
+### DVD dataset: l1logreg and tree
+
+<img src="output_section_5_2/multi_polarity_dvd_l1logreg.png" width="425"/> <img src="output_section_5_2/multi_polarity_dvd_tree.png" width="425"/>
 
 
 ### Running each experiment manually
