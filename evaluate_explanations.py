@@ -100,7 +100,7 @@ class ExplanationEvaluator:
         test_results[d][c] = []
         if c == 'l1logreg':
           c_features = self.classifiers[d][c].coef_.nonzero()[1]
-        print 'classifier:', c 
+        print 'Classifier:', c 
         for i in range(len(self.test_data[d])):
           if c == 'l1logreg':
             true_features = set([x for x in self.test_vectors[d][i].nonzero()[1] if x in c_features])
@@ -122,6 +122,9 @@ def run_experiment(dataset, algorithm, explainer):
   evaluator.load_datasets([dataset])
   evaluator.vectorize_and_train()
   explain_fn = None
+
+
+  print 'Explainer:', explainer
   if explainer == 'lime':
     rho = 25
     kernel = lambda d: np.sqrt(np.exp(-(d**2) / rho ** 2))
@@ -147,5 +150,16 @@ def run_experiment(dataset, algorithm, explainer):
   train_results, test_results = evaluator.measure_explanation_hability(explain_fn)
   out = {'train': train_results[dataset][algorithm], 'test' : test_results[dataset][algorithm]}
   # Return mean of recalls and invidivual train and test recalls
-  return np.mean(test_results[dataset][algorithm]), out
+  recall = np.mean(test_results[dataset][algorithm])
+  print 'Recall:', recall  
+  return recall, out
+
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser(description='Evaluate some explanations')
+  parser.add_argument('--dataset', '-d', type=str, required=True,help='dataset name')
+  parser.add_argument('--algorithm', '-a', type=str, required=True, help='algorithm_name')
+  parser.add_argument('--explainer', '-e', type=str, required=True, help='explainer name')
+  args = parser.parse_args()
+
+  run_experiment(args.dataset, args.algorithm, args.explainer)
 

@@ -12,27 +12,52 @@ parser = argparse.ArgumentParser(description='Evaluate some explanations')
 parser.add_argument('--output_dir', '-o', type=str, default='output_section_5_2/', help='dataset name')
 
 
-DATASETS = ['multi_polarity_books', 'multi_polarity_kitchen', 'multi_polarity_dvd']
+# 'multi_polarity_kitchen' is also a valid option but was not used in the paper.
+DATASETS = ['multi_polarity_books', 'multi_polarity_dvd']
 ALGORITHMS = ['l1logreg', 'tree']
-EXPLAINERS = ['random', 'greedy', 'lime']
+EXPLAINERS = ['random', 'parzen', 'greedy', 'lime']
 
-def bar_plot(recalls, img_path, output_dir):
+def bar_plot(recalls, img_path, output_dir, show_image=False):
   # create output dir if it does not exist
   try:
     os.stat(output_dir)
   except:
     os.mkdir(output_dir)       
 
-  # bar plot  
-  plt.bar(range(len(recalls)), recalls.values(), align='center')
-  plt.xticks(range(len(recalls)), list(recalls.keys()))
+  fig, ax = plt.subplots()
+
+  # bar plot
+  opacity = 0.4
+  bar_width = 0.35
+
+  plt.xlabel('Algorithms')
+  plt.ylabel('Recall for golden features')
+
+  x = recalls.keys()
+  y = [ r * 100 for r in recalls.values()]
+
+  bar = plt.bar(range(len(recalls)), y, align='center', alpha=opacity, color='b')
+  plt.xticks(range(len(recalls)), x, rotation=30)
+
+  # add counts above the bars
+  for rect in bar:
+    height = rect.get_height()
+    plt.text(rect.get_x() + rect.get_width()/2.0, height,
+             '%.2f' % height, ha='center', va='bottom')
+
+  # format y axis as percent
+  vals = ax.get_yticks()
+  ax.set_yticklabels(['{:3.2f}%'.format(x) for x in vals])
+
+  plt.legend()
+  plt.tight_layout()
+
+  # showing image
+  if show_image:
+    plt.show()
 
   # saving image  
-  fig = plt.gcf()
   fig.savefig(output_dir + img_path)
-  
-  # showing image
-  # plt.show()
 
   # clear image
   fig.clear()
@@ -57,7 +82,7 @@ def main():
         res[explainer] = recall
         print("--- %s seconds ---" % (time.time() - start_time)) 
     
-      img_name = dataset + '_' + algorithm + '.pdf'
+      img_name = dataset + '_' + algorithm + '.png'
       print 'Plotting and saving result as %s at %s' % (img_name, args.output_dir)
       bar_plot(res, img_name, args.output_dir)
 
