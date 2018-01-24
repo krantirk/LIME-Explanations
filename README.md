@@ -83,7 +83,7 @@ To run (1 time) the experiment present in the paper run:
 It will print the results in the screen, and save the results as csv at output_section_5_3/
 
 
-![output_section_5_3/multi_polarity_books.csv](output_section_5_3/multi_polarity_books.csv)
+[output_section_5_3/multi_polarity_books.csv](output_section_5_3/multi_polarity_books.csv)
 
 classifier     |  LIME        |  random      |  greedy      |  parzen
 ---------------|--------------|--------------|--------------|------------
@@ -93,7 +93,7 @@ random_forest  |  0.98+-0.01  |  0.16+-0.06  |  0.50+-0.10  |  0.93+-0.03
 svm            |  0.97+-0.01  |  0.17+-0.06  |  0.55+-0.12  |  0.92+-0.02
 
 
-![output_section_5_3/multi_polarity_dvd.csv](output_section_5_3/multi_polarity_dvd.csv)
+[output_section_5_3/multi_polarity_dvd.csv](output_section_5_3/multi_polarity_dvd.csv)
 
 classifier     |  LIME        |  random      |  greedy      |  parzen
 ---------------|--------------|--------------|--------------|------------
