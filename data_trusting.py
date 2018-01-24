@@ -18,6 +18,8 @@ from load_datasets import *
 import argparse
 import collections
 
+import pandas as pd
+
 
 def get_classifier(name, vectorizer):
   if name == 'logreg':
@@ -34,7 +36,7 @@ def get_classifier(name, vectorizer):
     return embedding_forest.EmbeddingForest(vectorizer)
 
 
-def run_experiment(dataset, algorithm, num_features, percent_untrustworthy, num_rounds):
+def run_experiment(df, dataset, algorithm, num_features, percent_untrustworthy, num_rounds):
   train_data, train_labels, test_data, test_labels, class_names = LoadDataset(dataset)
   vectorizer = CountVectorizer(lowercase=False, binary=True) 
   train_vectors = vectorizer.fit_transform(train_data)
@@ -47,7 +49,6 @@ def run_experiment(dataset, algorithm, num_features, percent_untrustworthy, num_
   classifier = get_classifier(algorithm, vectorizer)
   classifier.fit(train_vectors, train_labels)
 
-
   np.random.seed(1)
   untrustworthy_rounds = []
   all_features = range(train_vectors.shape[1])
@@ -58,7 +59,7 @@ def run_experiment(dataset, algorithm, num_features, percent_untrustworthy, num_
   rho = 25
   kernel = lambda d: np.sqrt(np.exp(-(d**2) / rho ** 2))
   LIME = explainers.GeneralizedLocalExplainer(kernel, explainers.data_labels_distances_mapping_text, num_samples=15000, return_mean=True, verbose=False, return_mapped=True)
-  '''
+
   parzen = parzen_windows.ParzenWindowClassifier()
   cv_preds = sklearn.cross_validation.cross_val_predict(classifier, train_vectors, train_labels, cv=5)
   parzen.fit(train_vectors, cv_preds)
@@ -71,10 +72,15 @@ def run_experiment(dataset, algorithm, num_features, percent_untrustworthy, num_
   {'neighbors': 0.5, 'svm': 7.0, 'tree': 2.0, 'logreg': 1.0, 'random_forest':
   1.0, 'embforest': 3.0}}
   parzen.sigma = sigmas[dataset][algorithm]
-  '''
+
+  explainer_names = ['LIME', 'random', 'greedy', 'parzen']
+  
+  # This will store the partial results so later it can be saved in "df"
+  res = {k: '' for k in ['classifier'] + explainer_names}
+  res['classifier'] = algorithm
+
   random = explainers.RandomExplainer()
-  exps = {}
-  explainer_names = ['LIME', 'random', 'greedy']  #, parzen
+  exps = {}  
   for expl in explainer_names:
     exps[expl] = []
 
@@ -85,9 +91,9 @@ def run_experiment(dataset, algorithm, num_features, percent_untrustworthy, num_
     sys.stdout.flush()
     exp, mean = LIME.explain_instance(test_vectors[i], 1, classifier.predict_proba, num_features)
     exps['LIME'].append((exp, mean))
-    #exp = parzen.explain_instance(test_vectors[i], 1, classifier.predict_proba, num_features, None) 
-    #mean = parzen.predict_proba(test_vectors[i])[1]
-    #exps['parzen'].append((exp, mean))
+    exp = parzen.explain_instance(test_vectors[i], 1, classifier.predict_proba, num_features, None) 
+    mean = parzen.predict_proba(test_vectors[i])[1]
+    exps['parzen'].append((exp, mean))
 
     exp = random.explain_instance(test_vectors[i], 1, None, num_features, None)
     exps['random'].append(exp)
@@ -121,10 +127,10 @@ def run_experiment(dataset, algorithm, num_features, percent_untrustworthy, num_
       tot = prev_tot2 - sum([x[1] for x in exp if x[0] in untrustworthy])
       trust['LIME'].add(i) if trust_fn(tot, prev_tot) else mistrust['LIME'].add(i)
      
-      #exp, mean = exps['parzen'][i]
-      #prev_tot = mean
-      #tot = mean - sum([x[1] for x in exp if x[0] in untrustworthy])
-      #trust['parzen'].add(i) if trust_fn(tot, prev_tot) else mistrust['parzen'].add(i)
+      exp, mean = exps['parzen'][i]
+      prev_tot = mean
+      tot = mean - sum([x[1] for x in exp if x[0] in untrustworthy])
+      trust['parzen'].add(i) if trust_fn(tot, prev_tot) else mistrust['parzen'].add(i)
       exp = exps['random'][i]
       trust['random'].add(i) if trust_fn_all(exp, untrustworthy) else mistrust['random'].add(i)
 
@@ -163,4 +169,21 @@ def run_experiment(dataset, algorithm, num_features, percent_untrustworthy, num_
   print 'F1:'
   for expl in explainer_names:
     print expl, np.mean(f1[expl]), '+-', np.std(f1[expl]), 'pvalue', sp.stats.ttest_ind(f1[expl], f1['LIME'])[1].round(4)
+    res[expl] = str('%.2f' % np.mean(f1[expl])) + '+-' + str('%.2f' % np.std(f1[expl]))
 
+  df = df.append(res, ignore_index=True)
+  return df
+
+
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser(description='Evaluate some explanations')
+  parser.add_argument('--dataset', '-d', type=str, required=True,help='dataset name')
+  parser.add_argument('--algorithm', '-a', type=str, required=True, help='algorithm_name')
+  parser.add_argument('--num_features', '-k', type=int, required=True, help='num features')
+  parser.add_argument('--percent_untrustworthy',  '-u', type=float, required=True, help='percentage of untrustworthy features. like 0.1')
+  parser.add_argument('--num_rounds', '-r', type=int, required=True, help='num rounds')
+  args = parser.parse_args()
+  
+  df = pd.DataFrame(columns=['classifier', 'LIME', 'random', 'greedy', 'parzen'])
+  print run_experiment(df, args.dataset, args.algorithm, args.num_features, args.percent_untrustworthy, args.num_rounds)
+  
